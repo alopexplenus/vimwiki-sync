@@ -28,7 +28,7 @@ augroup vimwiki
   endif
 
   if !exists('g:vimwiki_sync_commit_message')
-    let g:vimwiki_sync_commit_message = 'Auto commit + push. %c'
+    let g:vimwiki_sync_commit_message = 'Auto commit %c'
   endif
 
   " don't sync temporary wiki
@@ -79,30 +79,20 @@ augroup vimwiki
     endif
   endfunction
 
-  " push changes
-  " it seems that Vim terminates before it is executed, so it needs to be
-  " fixed
-  function! s:push_changes()
-    if has("nvim")
-      let gitjob = jobstart("git -C " . g:zettel_dir . " push origin " . g:vimwiki_sync_branch)
-      if g:sync_taskwarrior==1
-        let taskjob = jobstart("task sync")
-      endif
-    else
-      let gitjob = job_start("git -C " . g:zettel_dir . " push origin " . g:vimwiki_sync_branch)
-      if g:sync_taskwarrior==1
-        let taskjob = job_start("task sync")
-      endif
-    endif
+
+  " save buffer, commit and push changes
+  function! s:save_and_push()
+    execute ':silent write'
+    call <sid>git_action("git -C " . g:zettel_dir . " add . && git -C " . g:zettel_dir . " commit -m \"" . strftime(g:vimwiki_sync_commit_message) . "\" ")
+    call <sid>git_action("git -C " . g:zettel_dir . " push origin " . g:vimwiki_sync_branch . " >/home/nik/wikidebug.log 2>&1 &")
   endfunction
 
   " sync changes at the start
   au! VimEnter * call <sid>pull_changes()
   au! BufRead * call <sid>pull_changes()
   au! BufEnter * call <sid>pull_changes()
-  " auto commit changes on each file change
-  au! BufWritePost * call <sid>git_action("git -C " . g:zettel_dir . " add . ; git -C " . g:zettel_dir . " commit -m \"" . strftime(g:vimwiki_sync_commit_message) . "\"")
-  " push changes only on at the end
-  au! VimLeave * call <sid>git_action("git -C " . g:zettel_dir . " push origin " . g:vimwiki_sync_branch)
-  " au! VimLeave * call <sid>push_changes()
+
+  autocmd CursorHold * call <sid>save_and_push()
+  au! VimLeave * call <sid>save_and_push()
+  au! BufWritePost * call <sid>save_and_push()
 augroup END
