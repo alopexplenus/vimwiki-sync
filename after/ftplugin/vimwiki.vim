@@ -92,7 +92,15 @@ augroup vimwiki
   au! BufRead * call <sid>pull_changes()
   au! BufEnter * call <sid>pull_changes()
 
-  autocmd CursorHold * call <sid>save_and_push()
+  " sync changes on idle
+  set updatetime=10000
+  au! CursorHoldI * stopinsert
+  au! CursorHold * call <sid>save_and_push()
   au! VimLeave * call <sid>save_and_push()
   au! BufWritePost * call <sid>save_and_push()
+
+  " read if file changed
+  set autoread
+  au FileChangedShell * e!
+
 augroup END
